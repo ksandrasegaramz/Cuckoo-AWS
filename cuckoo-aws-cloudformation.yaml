@@ -2,10 +2,13 @@ Parameters:
       KeyName:
         Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
         Type: String
+      VpcIdInput:
+        Type: "AWS::EC2::VPC::Id"
+        Description: VPC id
       SubnetIdInput:
         Type: "AWS::EC2::Subnet::Id"
-      securityGroupIdList:
-        Type: "List<AWS::EC2::SecurityGroup::Id>"
+      # securityGroupIdList:
+      #   Type: "AWS::EC2::SecurityGroup"
         
 Resources:
   MyInstance:
@@ -35,8 +38,13 @@ Resources:
       InstanceType: t3.large
       AvailabilityZone: us-west-2a
       ImageId: ami-09c5e030f74651050
-      SecurityGroupIds: !Ref securityGroupIdList
-      SubnetId: !Ref SubnetIdInput
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          DeleteOnTermination: "true"
+          GroupSet: 
+            - !Ref CuckooSecurityGroup
+          SubnetId: !Ref SubnetIdInput
       BlockDeviceMappings:
         -
           DeviceName: /dev/sda1
@@ -46,3 +54,17 @@ Resources:
         -
           Key: Name
           Value: Cuckoo-AWS-Cloudformation
+  
+  CuckooSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: !Ref VpcIdInput
+      GroupDescription: SG to allow SSH access via port 22
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: '0.0.0.0/0'
+      Tags:
+        - Key: Name
+          Value: SSH-SG
